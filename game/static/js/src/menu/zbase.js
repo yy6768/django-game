@@ -13,10 +13,11 @@ class PyGameMenu{
         </div>
         <br>
         <div class="py-game-menu-field-item py-game-menu-field-item-settings-mode">
-            设置
+            退出
         </div>
     </div>
 </div>`);
+        this.$menu.hide();
         this.root.$py_game.append(this.$menu);
         this.$single_mode = this.$menu.find('.py-game-menu-field-item-single-mode');
         this.$multi_mode = this.$menu.find('.py-game-menu-field-item-multi-mode');
@@ -39,6 +40,7 @@ class PyGameMenu{
         });
 
         this.$settings_mode.click(function(){
+            that.root.settings.logout_on_remote();
             console.log("click settings mode");
         });
     }
