@@ -31,12 +31,6 @@ class Settings{
                     <div class="py-game-settings-option">
                         注册
                     </div>
-                    <br>
-                    <div class="py-game-settings-logo">
-                        <img width="30" alt="" src="https://app3333.acapp.acwing.com.cn/static/image/settings/acwing_logo.png" >
-                        <br>
-                        <div>Acwing一键登录</div>
-                    </div>
 
                </div>
                <div class="py-game-settings-register">
@@ -132,7 +126,7 @@ class Settings{
         this.$login_error_message.empty();
         let that = this;
         $.ajax({
-            url:'https://app3333.acapp.acwing.com.cn/settings/login/',
+            url:'http://124.220.18.48:8000/settings/login/',
             type:"GET",
             data:{
                 username:username,
@@ -157,7 +151,7 @@ class Settings{
         this.$register_error_message.empty();
 
         $.ajax({
-            url:'https://app3333.acapp.acwing.com.cn/settings/register/',
+            url:'http://124.220.18.48:8000/settings/register/',
             type:'GET',
             data:{
                 username:username,
@@ -180,7 +174,7 @@ class Settings{
             return false;
         }
         $.ajax({
-            url:"https://app3333.acapp.acwing.com.cn/settings/logout/",
+            url:"http://124.220.18.48:8000/settings/logout/",
             type:"GET",
             success:function(res){
                 console.log(res.result);
@@ -205,7 +199,7 @@ class Settings{
         let that = this;
 
         $.ajax({
-            url: "https://app3333.acapp.acwing.com.cn/settings/getinfo/",
+            url: "http://124.220.18.48:8000/settings/getinfo/",
             type:"GET",
             data: {
                 platform:that.platform,

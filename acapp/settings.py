@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-%x1oej#@w5n*uo%)viea!il*d^5e$gz#lzzad!puk3795mdc#j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["124.220.18.48", "127.0.0.1","app3333.acapp.acwing.com.cn"]
+ALLOWED_HOSTS = ["124.220.18.48", "127.0.0.1"]
 
 # Application definition
 
@@ -119,7 +119,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
-
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    },
+}
+USER_AGENTS_CACHE = 'default'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 在settings.py末尾加入
 import mimetypes
