@@ -33,15 +33,16 @@ class PyGameMenu{
         let that = this;
         this.$single_mode.click(function(){
             that.hide();
-            that.root.playground.show();
+            that.root.playground.show("single mode");
         });
         this.$multi_mode.click(function(){
-            console.log("click multi mode");
+            that.hide();
+            that.root.playground.show("multi mode");
         });
 
         this.$settings_mode.click(function(){
             that.root.settings.logout_on_remote();
-            console.log("click settings mode");
+            
         });
     }
 
@@ -64,6 +65,17 @@ class PyGameObject{
         this.timestamp = 0;
         //是否执行过start函数
         this.has_called_start = false;
+        this.uuid = this.create_uuid();
+
+    }
+
+    create_uuid(){
+        let res = "";
+        for(let i = 0; i < 8; i++){
+            let x = parseInt(Math.floor(Math.random() * 10));
+            res += x;
+        }
+        return res;
     }
 
     start(){ //第一次执行时执行
@@ -126,7 +138,13 @@ class GameMap extends PyGameObject{
     start(){
 
     } 
-
+    resize(){
+        this.ctx.canvas.width = this.playground.width;
+        this.ctx.canvas.height = this.playground.height;
+        this.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+        this.ctx.fillRect(0,0, this.ctx.canvas.width, this.ctx.canvas.height);
+    }
+    
     update(){
         this.render();
        
@@ -151,7 +169,7 @@ class Partical extends PyGameObject{
         this.speed = speed;
         this.friction = 0.9;
         this.move_length = move_length;
-        this.eps = 0.1;
+        this.eps = 0.01;
     }
 
     start(){
@@ -171,14 +189,15 @@ class Partical extends PyGameObject{
     }
 
     render(){
+        let scale = this.playground.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x,this.y,this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x * scale, this.y * scale,this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
     }
 }
 class Player extends PyGameObject {
-    constructor(playground, x, y, radius,color, speed, is_me){
+    constructor(playground, x, y, radius,color, speed, character,username, photo){
         super();
         this.playground = playground;
         this.ctx = this.playground.game_map.ctx; 
@@ -187,14 +206,16 @@ class Player extends PyGameObject {
         this.radius = radius;
         this.color = color;
         this.speed = speed;
-        this.is_me = is_me;
+        this.character = character;
+        this.username = username;
+        this.photo = photo;
         this.vx = 0;
         this.vy = 0;
         this.damage_x = 0;
         this.damage_y = 0;
         this.damage_speed = 0;
         this.move_length = 0;
-        this.eps = 0.1;
+        this.eps = 0.01;
 
         //冷静期
         this.spent_time = 0;
@@ -204,18 +225,18 @@ class Player extends PyGameObject {
 
         this.cur_skill = null;
 
-        if(this.is_me) {
+        if(this.character !== 'robot') {
             this.img = new Image();
-            this.img.src = this.playground.root.settings.photo;
+            this.img.src = this.photo;
         }
     }
 
     start(){
-        if(this.is_me){
+        if(this.character === 'me'){
             this.add_listening_events();
-        } else {
-            let tx = Math.random() * this.playground.width;
-            let ty = Math.random() * this.playground.height;
+        } else if(this.character ==='robot'){
+            let tx = Math.random() * this.playground.width / this.playground.scale;
+            let ty = Math.random() * this.playground.height / this.playground.scale;
             this.move_to(tx,ty);
         }
     }
@@ -228,10 +249,10 @@ class Player extends PyGameObject {
         this.playground.game_map.$canvas.mousedown(function(e){
             const rect = that.ctx.canvas.getBoundingClientRect();
             if(e.which ===3){
-                that.move_to(e.clientX -rect.left ,e.clientY- rect.top);
+                that.move_to((e.clientX -rect.left)/that.playground.scale , (e.clientY- rect.top) / that.playground.scale);
             } else if(e.which === 1){
                 if(that.cur_skill === "fireball"){
-                    that.shoot_fireball(e.clientX - rect.left, e.clientY - rect.top);
+                    that.shoot_fireball((e.clientX - rect.left) / that.playground.scale, (e.clientY - rect.top) / that.playground.scale );
                 }
 
                 that.cur_skill = null;
@@ -248,13 +269,13 @@ class Player extends PyGameObject {
 
     shoot_fireball(tx ,ty){
         let x = this.x, y = this.y;
-        let radius = this.playground.height * 0.01;
+        let radius =  0.01;
         let angle = Math.atan2(ty - this.y, tx - this.x);
         let vx = Math.cos(angle), vy = Math.sin(angle);
         let color = "orange";
-        let speed = this.playground.height * 0.5;
-        let move_length = this.playground.height * 1;
-        new FireBall(this.playground, this, x, y, radius, vx, vy, color, speed, move_length, this.playground.height * 0.01);
+        let speed = 0.5;
+        let move_length = 1;
+        new FireBall(this.playground, this, x, y, radius, vx, vy, color, speed, move_length,  0.01);
     }
 
     get_dist(x1,x2,y1,y2){
@@ -283,7 +304,7 @@ class Player extends PyGameObject {
             new Partical(this.playground, x, y, radius, vx, vy, color, speed, move_length);
         }
         this.radius -= damage;
-        if(this.radius < 10){
+        if(this.radius < this.eps){
             this.destroy();
             return false;
         }
@@ -295,17 +316,18 @@ class Player extends PyGameObject {
 
     }
 
-    update(){
+    //更新移动
+    update_move(){
         this.spent_time += this.timedelta / 1000;
 
-        if(!this.is_me && this.spent_time > 4 && Math.random() < 1 / 300.0){
+        if(this.character === 'robot' && this.spent_time > 4 && Math.random() < 1 / 300.0){
             let player = this.playground.players[Math.floor(Math.random() * this.playground.players.length)];
             let tx = player.x + player.vx * player.speed * this.timedelta / 1000 * 0.3;
             let ty = player.y + player.vy * player.speed * this.timedelta / 1000 * 0.3;
             this.shoot_fireball(tx, ty);
         }
 
-        if(this.damage_speed > 10){
+        if(this.damage_speed > this.eps){
             this.vx = this.vy = 0;
             this.move_length = 0;
             this.x += this.damage_x * this.damage_speed * this.timedelta / 1000;
@@ -316,9 +338,9 @@ class Player extends PyGameObject {
                 this.move_length = 0;
                 this.vx = 0;
                 this.vy = 0;
-                if(!this.is_me){
-                    let tx = Math.random() * this.playground.width;
-                    let ty = Math.random() * this.playground.height;
+                if(this.character === 'robot'){
+                    let tx = Math.random() * this.playground.width / this.playground.scale;
+                    let ty = Math.random() * this.playground.height /  this.playground.scale;
                     this.move_to(tx,ty);
                 }
             } else {
@@ -328,22 +350,27 @@ class Player extends PyGameObject {
                 this.move_length -= moved;
             }
         }
+    }
+
+    update(){
+        this.update_move();
         this.render();
 
     }
 
     render(){
-        if(this.is_me){
+        const  scale = this.playground.scale;
+        if(this.character !== 'robot'){
             this.ctx.save();
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.stroke();
             this.ctx.clip();
-            this.ctx.drawImage(this.img, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2); 
+            this.ctx.drawImage(this.img, (this.x - this.radius) * scale, (this.y - this.radius) * scale, this.radius * 2 * scale, this.radius * 2 * scale); 
             this.ctx.restore();
         } else {
             this.ctx.beginPath();
-            this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+            this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
             this.ctx.fillStyle = this.color;
             this.ctx.fill();
         }
@@ -372,7 +399,7 @@ class FireBall extends PyGameObject{
         this.speed = speed;
         this.move_length = move_length;
         this.damage = damage;
-        this.eps = 0.1;
+        this.eps = 0.01;
     }
 
 
@@ -424,10 +451,62 @@ class FireBall extends PyGameObject{
     }
 
     render(){
+        let scale  = this.playground.scale;
         this.ctx.beginPath();
-        this.ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+        this.ctx.arc(this.x * scale, this.y * scale, this.radius * scale, 0, Math.PI * 2, false);
         this.ctx.fillStyle = this.color;
         this.ctx.fill();
+    }
+}
+class MultiPlayerSocket{
+    constructor(playground){
+        this.playground = playground;
+        this.ws = new WebSocket("ws://124.220.18.48:8000/wss/multiplayer/");
+
+        this.start();
+    }
+    start(){
+      this.receive();  
+    }
+
+    receive(){
+        let that = this;
+
+        this.ws.onmessage = function(msg){
+            let data = JSON.parse(msg.data);
+            let uuid = data.uuid;
+            if(uuid === that.uuid) return false;
+            let event = data.event;
+            if(event === 'create_player'){
+                that.receive_create_player(uuid,data.username,data.photo);        
+            }
+        };
+    }
+
+    send_create_player(username, photo){
+        let that = this;
+        this.ws.send(JSON.stringify({
+            'event':'create_player',
+            'uuid':that.uuid,
+            'username':username,
+            'photo':photo
+        }));   
+    }
+
+    receive_create_player(uuid,username,photo){
+        let player = new Player(
+            this.playground,
+            this.playground.width / 2 /this.playground.scale,
+            0.5,
+            0.05,
+            "white",
+            0.15,
+            "enemy",
+            username,
+            photo,
+        );
+        player.uuid = uuid;
+        this.playground.players.push(player);
     }
 }
 class PyGamePlayGround{
@@ -435,10 +514,15 @@ class PyGamePlayGround{
         this.root = root;
         this.$playground = $(`<div class="py-game-playground"></div>`);
         this.hide();
+        this.root.$py_game.append(this.$playground);
         this.start();
     }
 
     start(){
+        let that = this;
+        $(window).resize(function(){
+            that.resize();
+        });
     }
 
     get_random_color(){
@@ -446,20 +530,45 @@ class PyGamePlayGround{
         return colors[Math.floor(Math.random() * 5)];
     }
     //打开playground界面
-    show(){
+    show(mode){
         this.$playground.show();
         this.root.$py_game.append(this.$playground);
         this.width = this.$playground.width();
         this.height = this.$playground.height();
-        
+        this.resize();
+        let that = this;
         this.game_map = new GameMap(this);
         this.players = [];
-        this.players.push(new Player(this, this.width/2, this.height/2, this.height * 0.05, "white", this.height*0.15, true));
-        for(let i = 0; i < 5; i++){
-            this.players.push(new Player(this, this.width/2, this.height/2, this.height * 0.05, this.get_random_color(), this.height*0.15, false));
+        console.log(this.root.settings.username);
+        this.players.push(new Player(this, this.width / 2 / this.scale, 0.5, 0.05, "white", 0.15, "me",this.root.settings.username, this.root.settings.photo));
+        if(mode === "single mode"){
+            for(let i = 0; i < 5; i++){
+                this.players.push(new Player(this, this.width / 2 /this.scale, 0.5, 0.05, this.get_random_color(), 0.15, "robot"));
+            }
+        } else if(mode ==="multi mode"){
+            this.mps = new MultiPlayerSocket(this);
+            this.mps.uuid = this.players[0].uuid;
+
+            this.mps.ws.onopen = function(){
+               that.mps.send_create_player(that.root.settings.username,that.root.settings.photo); 
+            }
+            
         }
     }
-    
+
+    resize(){
+
+        this.width = this.$playground.width();
+        this.height = this.$playground.height();
+        let unit =Math.min(this.width / 16, this.height / 9);
+        this.width  = unit * 16;
+        this.height = unit * 9;
+        this.scale =  this.height;
+
+        if(this.game_map) this.game_map.resize();
+    }
+
+
     hide(){
         this.$playground.hide();
     }
@@ -529,11 +638,6 @@ class Settings{
                         登录
                     </div>
                     <br>
-                    <div class="py-game-settings-logo">
-                        <img width="30" alt="" src="https://app3333.acapp.acwing.com.cn/static/image/settings/acwing_logo.png" >
-                        <br>
-                        <div>Acwing一键登录</div>
-                    </div>
                </div>
             <div>
         `);  

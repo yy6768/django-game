@@ -63,11 +63,6 @@ class Settings{
                         登录
                     </div>
                     <br>
-                    <div class="py-game-settings-logo">
-                        <img width="30" alt="" src="https://app3333.acapp.acwing.com.cn/static/image/settings/acwing_logo.png" >
-                        <br>
-                        <div>Acwing一键登录</div>
-                    </div>
                </div>
             <div>
         `);  

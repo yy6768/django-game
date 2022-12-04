@@ -9,6 +9,17 @@ class PyGameObject{
         this.timestamp = 0;
         //是否执行过start函数
         this.has_called_start = false;
+        this.uuid = this.create_uuid();
+
+    }
+
+    create_uuid(){
+        let res = "";
+        for(let i = 0; i < 8; i++){
+            let x = parseInt(Math.floor(Math.random() * 10));
+            res += x;
+        }
+        return res;
     }
 
     start(){ //第一次执行时执行
